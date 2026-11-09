@@ -1,0 +1,497 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Kalkulator Harga Joki Akun</title>
+<style>
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  padding: 20px;
+  font-family: Arial, sans-serif;
+  background: #101522;
+  color: #fff;
+}
+.container {
+  max-width: 650px;
+  margin: auto;
+  padding: 22px;
+  background: #1b2435;
+  border-radius: 15px;
+  box-shadow: 0 5px 20px #0006;
+}
+h2 {
+  text-align: center;
+  color: #ffd76a;
+  margin-top: 0;
+}
+label {
+  display: block;
+  margin: 15px 0 7px;
+  font-weight: bold;
+}
+select, input {
+  width: 100%;
+  padding: 12px;
+  border: 1px solid #526078;
+  border-radius: 8px;
+  background: #101827;
+  color: white;
+  font-size: 16px;
+}
+button {
+  width: 100%;
+  margin-top: 20px;
+  padding: 14px;
+  border: 0;
+  border-radius: 8px;
+  background: #e6ad38;
+  color: #171717;
+  font-size: 17px;
+  font-weight: bold;
+  cursor: pointer;
+}
+button:hover { background: #ffca55; }
+.result {
+  display: none;
+  margin-top: 22px;
+  padding: 17px;
+  border-radius: 10px;
+  background: #101827;
+}
+.total {
+  color: #ffd76a;
+  font-size: 27px;
+  font-weight: bold;
+  text-align: center;
+  margin: 12px 0;
+}
+.detail {
+  line-height: 1.8;
+  border-bottom: 1px solid #354157;
+  padding: 8px 0;
+}
+.price-list {
+  margin-top: 25px;
+  padding: 15px;
+  background: #101827;
+  border-radius: 10px;
+}
+.price-list h3 { color: #ffd76a; }
+.price-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 8px 0;
+  border-bottom: 1px solid #354157;
+}
+.note {
+  color: #aab6c9;
+  font-size: 12px;
+  line-height: 1.6;
+  margin-top: 15px;
+}
+.hint {
+  color: #aab6c9;
+  font-size: 12px;
+  margin-top: 5px;
+  line-height: 1.5;
+}
+.grading-row {
+  display: flex;
+  gap: 12px;
+}
+.grading-row > div { flex: 1; }
+.grading-row small {
+  display: block;
+  margin-bottom: 5px;
+  color: #aab6c9;
+}
+</style>
+</head>
+<body>
+
+<div class="container">
+  <h2>KALKULATOR HARGA JOKI AKUN</h2>
+
+  <label>Rank Saat Ini</label>
+  <select id="rankAwal"></select>
+
+  <label id="labelAwal">Bintang Saat Ini</label>
+  <div id="wrapAwal"></div>
+
+  <label>Rank Tujuan</label>
+  <select id="rankTujuan"></select>
+
+  <label>Bintang Tujuan</label>
+  <div id="wrapTujuan"></div>
+
+  <button onclick="hitungHarga()">HITUNG HARGA</button>
+
+  <div class="result" id="hasil">
+    <h3 style="text-align:center">HASIL PERHITUNGAN</h3>
+    <div id="ringkasan"></div>
+    <div class="total" id="totalHarga"></div>
+    <h3>Rincian Biaya</h3>
+    <div id="rincian"></div>
+  </div>
+
+  <div class="price-list">
+    <h3>DAFTAR HARGA PER BINTANG</h3>
+    <div class="price-row"><span>Epic</span><b>5.500 / bintang</b></div>
+    <div class="price-row"><span>Legend</span><b>6.000 / bintang</b></div>
+    <div class="price-row"><span>Mythic</span><b>13.000 / bintang</b></div>
+    <div class="price-row"><span>Mythical Honor</span><b>15.000 / bintang</b></div>
+    <div class="price-row"><span>Mythical Glory</span><b>20.000 / bintang</b></div>
+    <div class="price-row"><span>Mythical Immortal</span><b>25.000 / bintang</b></div>
+  </div>
+
+  <div class="note">
+    Catatan: Perhitungan Mythic Grading berupa estimasi berdasarkan jumlah menang dan kalah yang sudah dimainkan.
+    Perhitungan final tetap menyesuaikan hasil grading secara manual.<br>
+    Order dari Epic atau Legend ke Mythic ke atas: target Mythic 1-5 dihitung penuh, target Mythic 6-10 dihitung 5 bintang Mythic, dan target di atas 10 dikurangi 5 bintang Mythic karena sudah terpenuhi lewat bonus Mythic Grading (maksimal 5 kemenangan double bintang).
+  </div>
+</div>
+
+<script>
+// group: 0 = Epic, 1 = Legend, 2 = Mythic+
+// base = jumlah bintang dari awal grup (Epic V 0 / Legend V 0)
+// grading: true = Mythic Grading (input menang & kalah)
+const ranks = [
+  {name:"Epic V",   group:0, base:0,  min:0, max:5},
+  {name:"Epic IV",  group:0, base:5,  min:0, max:5},
+  {name:"Epic III", group:0, base:10, min:0, max:5},
+  {name:"Epic II",  group:0, base:15, min:0, max:5},
+  {name:"Epic I",   group:0, base:20, min:0, max:5},
+
+  {name:"Legend V",   group:1, base:0,  min:0, max:5},
+  {name:"Legend IV",  group:1, base:5,  min:0, max:5},
+  {name:"Legend III", group:1, base:10, min:0, max:5},
+  {name:"Legend II",  group:1, base:15, min:0, max:5},
+  {name:"Legend I",   group:1, base:20, min:0, max:5},
+
+  {name:"Mythic",            group:2, base:0, min:0,   max:24},
+  {name:"Mythic Grading",    group:2, base:0, min:0,   max:0, grading:true},
+  {name:"Mythical Honor",    group:2, base:0, min:25,  max:49},
+  {name:"Mythical Glory",    group:2, base:0, min:50,  max:99},
+  {name:"Mythical Immortal", group:2, base:0, min:100, max:9999}
+];
+
+const TOTAL_GRADING = 10;   // total pertandingan grading
+const MAKS_MAIN = 9;        // maksimal pertandingan yang bisa sudah dimainkan (10 = grading selesai)
+const MAKS_DOUBLE = 5;      // menang pertama yang dapat 2 bintang
+
+const tierMythic = [
+  {name:"Mythic",            start:0,   end:25,       price:13000},
+  {name:"Mythical Honor",    start:25,  end:50,       price:15000},
+  {name:"Mythical Glory",    start:50,  end:100,      price:20000},
+  {name:"Mythical Immortal", start:100, end:Infinity, price:25000}
+];
+
+const EPIC_TOTAL = 26;
+const LEGEND_TOTAL_DARI_LEGEND = 26;
+const LEGEND_TOTAL_DARI_EPIC = 25;
+const HARGA_EPIC = 5500;
+const HARGA_LEGEND = 6000;
+
+// Bonus Mythic Grading untuk order dari Epic/Legend ke Mythic ke atas.
+// Target Mythic 1-5  -> dihitung penuh (bonus 0)
+// Target Mythic 6-10 -> dihitung 5 bintang (bonus = target - 5)
+// Target Mythic >10  -> target dikurangi 5 (bonus 5)
+const BONUS_GRADING = MAKS_DOUBLE;
+function hitungBonus(targetMythic) {
+  return Math.min(BONUS_GRADING, Math.max(0, targetMythic - BONUS_GRADING));
+}
+
+const awal = document.getElementById("rankAwal");
+const tujuan = document.getElementById("rankTujuan");
+
+ranks.forEach((rank, index) => {
+  awal.add(new Option(rank.name, index));
+  // Mythic Grading hanya untuk rank saat ini, bukan rank tujuan
+  if (!rank.grading) {
+    tujuan.add(new Option(rank.name, index));
+  }
+});
+
+/* ============================================================
+   MYTHIC GRADING
+   - 5 kemenangan pertama = 2 bintang, kemenangan berikutnya = 1 bintang
+   - Kekalahan tidak menambah bintang
+   - Sisa grading dihitung 1 bintang per pertandingan, maksimal
+     sebanyak slot menang double yang belum terpakai (5 - menang)
+   - Menang + kalah maksimal 9 (jika sudah 10, grading selesai)
+   ============================================================ */
+function hitungGrading(menang, kalah) {
+  const sisa = TOTAL_GRADING - menang - kalah;
+  const dariMenang = menang <= MAKS_DOUBLE
+    ? menang * 2
+    : MAKS_DOUBLE * 2 + (menang - MAKS_DOUBLE);
+  const dariSisa = Math.min(Math.max(sisa, 0), Math.max(0, MAKS_DOUBLE - menang));
+  return {sisa, dariMenang, dariSisa, total: dariMenang + dariSisa};
+}
+
+function pilihanAngka(id, maks) {
+  let opsi = "";
+  for (let i = 0; i <= maks; i++) {
+    opsi += `<option value="${i}">${i}</option>`;
+  }
+  return `<select id="${id}">${opsi}</select>`;
+}
+
+function updateHintGrading() {
+  const m = Number(document.getElementById("gMenang").value);
+  const k = Number(document.getElementById("gKalah").value);
+  const hint = document.getElementById("gHint");
+
+  if (m + k > MAKS_MAIN) {
+    hint.innerHTML = `<span style="color:#ff7a7a">Menang + kalah maksimal ${MAKS_MAIN}. Jika sudah ${TOTAL_GRADING} pertandingan, grading selesai dan bukan Mythic Grading lagi.</span>`;
+    return;
+  }
+  const g = hitungGrading(m, k);
+  hint.innerHTML =
+    `Sisa grading: <b>${g.sisa}</b> kali. ` +
+    `Bintang terhitung: <b>${g.total}</b> ` +
+    `(${g.dariMenang} dari menang + ${g.dariSisa} dari sisa grading).`;
+}
+
+/* ============================================================
+   INPUT BINTANG
+   Epic/Legend -> pilihan 0-5
+   Mythic Grading -> pilihan menang & kalah 0-9
+   Mythic ke atas -> angka manual (otomatis terisi batas bawah)
+   ============================================================ */
+function buatInputBintang(wrapId, inputId, rank) {
+  const wrap = document.getElementById(wrapId);
+
+  if (rank.grading) {
+    wrap.innerHTML = `
+      <div class="grading-row">
+        <div><small>Menang</small>${pilihanAngka("gMenang", MAKS_MAIN)}</div>
+        <div><small>Kalah</small>${pilihanAngka("gKalah", MAKS_MAIN)}</div>
+      </div>
+      <div class="hint" id="gHint"></div>
+    `;
+    document.getElementById("gMenang").addEventListener("change", updateHintGrading);
+    document.getElementById("gKalah").addEventListener("change", updateHintGrading);
+    updateHintGrading();
+  } else if (rank.group < 2) {
+    let opsi = "";
+    for (let i = rank.min; i <= rank.max; i++) {
+      opsi += `<option value="${i}">${i}</option>`;
+    }
+    wrap.innerHTML = `<select id="${inputId}">${opsi}</select>`;
+  } else {
+    const batas = rank.max >= 9999 ? "ke atas" : "s/d " + rank.max;
+    wrap.innerHTML = `
+      <input type="number" id="${inputId}" min="${rank.min}"
+             max="${rank.max >= 9999 ? "" : rank.max}" value="${rank.min}">
+      <div class="hint">Isi manual: ${rank.min} ${batas}</div>
+    `;
+  }
+}
+
+function updateAwal() {
+  const rank = ranks[Number(awal.value)];
+  document.getElementById("labelAwal").textContent =
+    rank.grading ? "Hasil Mythic Grading (Menang / Kalah)" : "Bintang Saat Ini";
+  buatInputBintang("wrapAwal", "bintangAwal", rank);
+}
+
+function updateTujuan() {
+  buatInputBintang("wrapTujuan", "bintangTujuan", ranks[Number(tujuan.value)]);
+}
+
+awal.addEventListener("change", updateAwal);
+tujuan.addEventListener("change", updateTujuan);
+
+tujuan.value = 10;
+updateAwal();
+updateTujuan();
+
+function formatAngka(angka) {
+  return angka.toLocaleString("id-ID");
+}
+
+function posisi(rank, star) {
+  return rank.base + star;
+}
+
+function hitungSegmen(rankA, starA, rankT, starT) {
+  const segmen = [];
+  const tambah = (nama, jumlah, price) => {
+    if (jumlah > 0) segmen.push({nama, jumlah, harga: price});
+  };
+
+  const pa = posisi(rankA, starA);
+  const pt = posisi(rankT, starT);
+  const gA = rankA.group;
+  const gT = rankT.group;
+
+  const tambahMythic = (m1, m2) => {
+    tierMythic.forEach(t => {
+      const dari = Math.max(m1, t.start);
+      const sampai = Math.min(m2, t.end);
+      tambah(t.name, sampai - dari, t.price);
+    });
+  };
+
+  if (gA === 0) {
+    if (gT === 0) {
+      tambah("Epic", pt - pa, HARGA_EPIC);
+    } else if (gT === 1) {
+      tambah("Epic", EPIC_TOTAL - pa, HARGA_EPIC);
+      tambah("Legend", pt, HARGA_LEGEND);
+    } else {
+      tambah("Epic", EPIC_TOTAL - pa, HARGA_EPIC);
+      tambah("Legend", LEGEND_TOTAL_DARI_EPIC, HARGA_LEGEND);
+      tambahMythic(hitungBonus(pt), pt);
+    }
+  } else if (gA === 1) {
+    if (gT === 1) {
+      tambah("Legend", pt - pa, HARGA_LEGEND);
+    } else {
+      tambah("Legend", LEGEND_TOTAL_DARI_LEGEND - pa, HARGA_LEGEND);
+      tambahMythic(hitungBonus(pt), pt);
+    }
+  } else {
+    // Mythic, Mythic Grading, Honor, Glory, Immortal
+    tambahMythic(pa, pt);
+  }
+
+  return segmen;
+}
+
+function hitungHarga() {
+  const indexAwal = Number(awal.value);
+  const indexTujuan = Number(tujuan.value);
+  const rankA = ranks[indexAwal];
+  const rankT = ranks[indexTujuan];
+
+  let starAwal;
+  let infoGrading = null;
+
+  if (rankA.grading) {
+    const menang = Number(document.getElementById("gMenang").value);
+    const kalah = Number(document.getElementById("gKalah").value);
+
+    if (menang + kalah > MAKS_MAIN) {
+      alert("Jumlah menang + kalah maksimal " + MAKS_MAIN + ". Jika sudah " + TOTAL_GRADING + " pertandingan, grading sudah selesai.");
+      return;
+    }
+
+    infoGrading = hitungGrading(menang, kalah);
+    infoGrading.menang = menang;
+    infoGrading.kalah = kalah;
+    starAwal = infoGrading.total;
+  } else {
+    starAwal = Number(document.getElementById("bintangAwal").value);
+  }
+
+  const starTujuan = Number(document.getElementById("bintangTujuan").value);
+
+  if (starAwal < 0 || starTujuan < 0 ||
+      !Number.isInteger(starAwal) || !Number.isInteger(starTujuan)) {
+    alert("Masukkan jumlah bintang berupa angka bulat dan tidak negatif.");
+    return;
+  }
+
+  if (!rankA.grading && (starAwal < rankA.min || starAwal > rankA.max)) {
+    alert("Jumlah bintang tidak sesuai dengan rank saat ini.");
+    return;
+  }
+
+  if (starTujuan < rankT.min || starTujuan > rankT.max) {
+    alert("Jumlah bintang tidak sesuai dengan rank tujuan.");
+    return;
+  }
+
+  if (!rankA.grading &&
+      (indexTujuan < indexAwal ||
+      (indexTujuan === indexAwal && starTujuan < starAwal))) {
+    alert("Rank tujuan harus lebih tinggi atau sama dengan rank saat ini.");
+    return;
+  }
+
+  const rincianHarga = hitungSegmen(rankA, starAwal, rankT, starTujuan);
+
+  let total = 0;
+  let totalBintang = 0;
+  rincianHarga.forEach(item => {
+    item.subtotal = item.jumlah * item.harga;
+    total += item.subtotal;
+    totalBintang += item.jumlah;
+  });
+
+  let dariText;
+  if (infoGrading) {
+    dariText = `
+      <div class="detail">
+        <b>Dari:</b> ${rankA.name} (${infoGrading.menang} menang, ${infoGrading.kalah} kalah, sisa ${infoGrading.sisa})
+      </div>
+      <div class="detail">
+        <b>Bintang terhitung dari grading:</b> ${infoGrading.total}
+        (${infoGrading.dariMenang} dari menang + ${infoGrading.dariSisa} dari sisa grading)
+      </div>`;
+  } else {
+    dariText = `
+      <div class="detail">
+        <b>Dari:</b> ${rankA.name} ${starAwal} bintang
+      </div>`;
+  }
+
+  // Info bonus grading untuk order Epic/Legend -> Mythic ke atas
+  let bonusText = "";
+  if (rankA.group < 2 && rankT.group === 2) {
+    const bonus = hitungBonus(posisi(rankT, starTujuan));
+    if (bonus > 0) {
+      bonusText = `
+      <div class="detail">
+        <b>Bonus Mythic Grading:</b> ${bonus} bintang Mythic tidak dihitung
+      </div>`;
+    }
+  }
+
+  document.getElementById("ringkasan").innerHTML = `
+    ${dariText}
+    <div class="detail">
+      <b>Ke:</b> ${rankT.name} ${starTujuan} bintang
+    </div>
+    ${bonusText}
+    <div class="detail">
+      <b>Total bintang yang dihitung:</b> ${totalBintang}
+    </div>
+  `;
+
+  document.getElementById("totalHarga").textContent = formatAngka(total);
+
+  let html = "";
+
+  rincianHarga.forEach(item => {
+    html += `
+      <div class="detail">
+        <b>${item.nama}</b><br>
+        ${item.jumlah} bintang × ${formatAngka(item.harga)}
+        = <b>${formatAngka(item.subtotal)}</b>
+      </div>
+    `;
+  });
+
+  if (rincianHarga.length === 0) {
+    html = "<div class='detail'>Tidak ada bintang yang perlu ditambahkan.</div>";
+  }
+
+  html += `
+    <div class="detail" style="color:#ffd76a;font-size:18px">
+      <b>Total: ${formatAngka(total)}</b>
+    </div>
+  `;
+
+  document.getElementById("rincian").innerHTML = html;
+  document.getElementById("hasil").style.display = "block";
+}
+</script>
+
+</body>
+</html>
